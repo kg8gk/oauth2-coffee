@@ -1,8 +1,10 @@
 class OAuth2
-  response_type : "code"
+
+  responseType : "code"
+  state : ""
 
   constructor: (@appId, @apiKey="") -> 
-    # @response_type = "code"
+    @scope = []
     @validateAppId(@appId)
     @validateStrInput(@apiKey)
 
@@ -16,12 +18,29 @@ class OAuth2
     @validateStrInput(redirectUri) 
 
   getResponseType: () ->
-    @response_type
+    @responseType
 
   changeResponseType: () ->
-    return @response_type = "token" if @response_type is "code"
-    @response_type = "code"
+    return @responseType = "token" if @responseType is "code"
+    @responseType = "code"
 
+  addToScope: (scope) ->
+    return false unless scope.substring?
+    @scope.push(scope)
+
+  removeFromScope: (index) ->
+    return @scope.splice(index) if 0 <= index <= @scope.length
+    false
+
+  getScope: ->
+    @scope
+
+  setState: (@state) ->
+    return false unless @state.substring? 
+    @state
+
+  getState: () ->
+    @state
 
   # private
   validateAppId: (appId) ->
@@ -30,4 +49,4 @@ class OAuth2
     throw new TypeError("appId msut be string") unless appId.substring?
 
   validateStrInput: (strInput) ->
-    throw new TypeError("input must be string") unless strInput.substring? 
+    throw new TypeError("input must be string") unless strInput.substring?
