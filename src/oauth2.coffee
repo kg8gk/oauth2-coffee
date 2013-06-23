@@ -24,10 +24,10 @@ class OAuth2
   setRedirectUri: (@_redirectUri) ->
     @_validateStrInput(@_redirectUri) 
 
-  get_responseType: () ->
+  getResponseType: () ->
     @_responseType
 
-  change_responseType: () ->
+  changeResponseType: () ->
     return @_responseType = "token" if @_responseType is "code"
     @_responseType = "code"
 
