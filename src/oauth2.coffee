@@ -1,114 +1,113 @@
 https  = require "https"
 url    = require "url"
-qs     = require "querystring"
 
 class OAuth2
 
-  responseType : 'code'
-  state : ''
-  grantType: 'authorization_code'
-  code : ''
-  redirectUri : ''
-  responseData: ''
+  _responseType : 'code'
+  _state : ''
+  _grantType: 'authorization_code'
+  _code : ''
+  _redirectUri : ''
+  _accessUri : ''
 
-  constructor: (@appId, @apiKey="") -> 
-    @scope = []
-    @validateAppId(@appId)
-    @validateStrInput(@apiKey)
+  constructor: (@_appId, @_apiKey="") -> 
+    @_scope = []
+    @_validateAppId(@_appId)
+    @_validateStrInput(@_apiKey)
 
-  setAppId: (@appId) ->
-    @validateAppId(appId)
+  setAppId: (@_appId) ->
+    @_validateAppId(@_appId)
 
-  setApiKey: (@apiKey) ->
-    @validateStrInput(apiKey)
+  setApiKey: (@_apiKey) ->
+    @_validateStrInput(@_apiKey)
 
-  setRedirectUri: (@redirectUri) ->
-    @validateStrInput(redirectUri) 
+  setRedirectUri: (@_redirectUri) ->
+    @_validateStrInput(@_redirectUri) 
 
-  getResponseType: () ->
-    @responseType
+  get_responseType: () ->
+    @_responseType
 
-  changeResponseType: () ->
-    return @responseType = "token" if @responseType is "code"
-    @responseType = "code"
+  change_responseType: () ->
+    return @_responseType = "token" if @_responseType is "code"
+    @_responseType = "code"
 
   addToScope: (scope) ->
     return false unless scope.substring?
-    @scope.push(scope)
+    @_scope.push(scope)
 
   removeFromScope: (index) ->
-    return @scope.splice(index) if 0 <= index <= @scope.length
+    return @_scope.splice(index) if 0 <= index <= @_scope.length
     false
 
   getScope: ->
-    @scope
+    @_scope
 
-  setState: (@state) ->
-    return false unless @state.substring? 
-    @state
+  setState: (@_state) ->
+    return false unless @_state.substring? 
+    @_state
 
   getState: ->
-    @state
+    @_state
 
   # e.g., authorizedUrl => https://www.douban.com/service/auth2/auth
   getAuthorizedUri: (authorizedUrl) ->
-    "#{authorizedUrl}?client_id=#{@appId}&redirect_uri=#{@redirectUri}&response_type=#{@responseType}&state=#{@state}&scope=#{@scope.join ','}"
+    "#{authorizedUrl}?client_id=#{@_appId}&redirect_uri=#{@_redirectUri}&response_type=#{@_responseType}&state=#{@_state}&scope=#{@_scope.join ','}"
 
   getGrantType: -> 
-    @grantType
+    @_grantType
 
   changeGrantType: ->
-    return @grantType = "refresh_token" if @grantType is "authorization_code"
-    @grantType = "authorization_code"
+    return @_grantType = "refresh_token" if @_grantType is "authorization_code"
+    @_grantType = "authorization_code"
 
-  getAccessToken: (@accessUri, @code) ->
-    req = https.request getTokenRequestOptions(), (res) ->
+  setTokenUri : (@_accessUri) ->
+    @_validateStrInput(@_accessUri) 
+
+  getTokenUri : ->
+    @_accessUri
+
+  getAccessToken: (@_code, callback, errorHandler) =>
+    responseData = ''
+    req = https.request @_getTokenRequestOptions(), (res) ->
       res.setEncoding 'utf8'
 
-      res.on 'data', receieveData
+      res.on 'data', (data) ->
+        responseData += data
 
-      res.on 'end', parseCompleteData
+      res.on 'end', () ->
+        callback JSON.parse(responseData)
 
-    req.write(getTokenContent())
+    req.write(@_getTokenContent())
     req.end()
 
-    req.on 'error', handleRequestError
+    req.on 'error', (err) ->
+      if errorHandler?
+        errorHandler(err)
+      else
+        console.error "Error => #{err.toString()}"
 
-
-  getResponseData: ->
-    until @isDataComplete
-      false  
-    @responseData 
   
   # private helper functions
-  validateAppId: (appId) ->
+  _validateAppId: (appId) ->
     throw new ReferenceError("appId must not be empty") unless appId?
     throw new ReferenceError("appId must not be empty") if appId is ""
-    throw new TypeError("appId must be string") unless appId.substring?
+    throw new TypeError("appId must be string") unless (typeof appId is 'string')
 
-  validateStrInput: (strInput) ->
-    throw new TypeError("input must be string") unless strInput.substring?
+  _validateStrInput: (strInput) ->
+    throw new TypeError("input must be string") unless (typeof strInput is 'string')
 
-  receieveData: (data) ->
-    @requestData += data
+  _getTokenContent: ->
+    "client_id=#{@_appId}&client_secret=#{@_apiKey}&redirect_uri=#{@_redirectUri}&grant_type=#{@_grantType}&code=#{@_code}"
 
-  parseCompleteData: ->
-    @requestData = JSON.parse(@requestData)
-    @isDataComplete = true
-
-  handleRequestError: (err) ->
-    console.error err
-
-  getTokenContent: ->
-    "client_id=#{@appId}&client_secret=#{@apiKey}&redirect_uri=#{@redirectUri}&grant_type=#{@grantType}&code=#{@code}"
-
-  getTokenRequestOptions: ->
-    # TODO 
-    obj =
-      hostname: 'www.douban.com'
-      path: '/service/auth2/token'
+  _getTokenRequestOptions: ->
+    obj = url.parse(@_accessUri)
+    urlOptions =
+      hostname: obj.hostname
+      path: obj.path
       method: 'POST'
       headers:
         'Content-Type': 'application/x-www-form-urlencoded'
-        'Content-Length': @getTokenContent().length
+        'Content-Length': @_getTokenContent().length 
+    urlOptions
 
+exports.OAuth2 = OAuth2
