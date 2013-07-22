@@ -110,4 +110,4 @@ class OAuth2
         'Content-Length': @_getTokenContent().length 
     urlOptions
 
-exports.OAuth2 = OAuth2
+module.exports = OAuth2
